@@ -31,8 +31,8 @@ class RBF:
         self.lr = lr
         self.n_epochs = n_epochs
         self.weight_vector = np.zeros((self.arch[1], self.arch[2]))
-        self.mus = np.zeros(self.arch[1])
-        self.sigmas = np.ones(self.arch[1])
+        self.mus = np.zeros((self.arch[1],arch[0]))
+        self.sigmas = np.ones((self.arch[1],1))
         self.rad_basis_fn = rad_basis_fn
 
     def initialize_weights(self) :
@@ -47,21 +47,44 @@ class RBF:
     def rad_basis_mat(self,X) :
         # Number of input patterns
         N = np.shape(X)[1]
+        out_dim = np.shape(X)[0]
         # Compute RBF matrix
         Phi = np.zeros((N,self.n))
         for i in range(self.n) :
             # Vectorize radial basis transfer function
             def rad_bas_fn_i(x) :
-                return self.rad_basis_fn(x,self.mus[i],self.sigmas[i])
-            vfunc = np.vectorize(rad_bas_fn_i)
-            Phi[:,i] = vfunc(X)
+                return self.rad_basis_fn(x,self.mus[[i],:],self.sigmas[i,:])
+            if out_dim > 1 :
+                Phi[:,i] = np.apply_along_axis(rad_bas_fn_i, 0, X)
+            else :
+                vfunc = np.vectorize(rad_bas_fn_i)
+                Phi[:,i] = vfunc(X)
         self.Phi = Phi
         return Phi
 
-    def winner_takes_all(self) :
-        # Find centers for each RBF cluster function
-        return None
-
+    def winner_takes_all(self,X,lr,unique_winner=True) :
+        # Shuffle data points
+        N = np.shape(X)[1]
+        shuffled_indices = np.random.choice(N, size=N, replace=False)
+        X = X[:,shuffled_indices]
+        # Iterate over patterns (columns)
+        for i in range(N) :
+            # Find closest RBF node
+            distances = X[:,[i]].T - self.mus
+            distances_norm = np.linalg.norm(distances,axis=1)
+            # Update center of closest node
+            if unique_winner :
+                min_i = np.argmin(distances_norm)
+                self.mus[min_i,:] = self.mus[min_i,:] + lr*distances[min_i,:]
+            else :
+                min_indices = np.argsort(distances_norm)
+                power = 0
+                n_mins = 3 if len(distances_norm) >= 3 else 1
+                for min_i in min_indices[:n_mins] :
+                    min_i = np.argmin(distances_norm)
+                    self.mus[min_i,:] = self.mus[min_i,:] + (lr**power)*distances[min_i,:]
+                    power += 1
+                
     def forward_pass(self,X) :
         # Compute RBF matrix
         Phi = self.rad_basis_mat(X)
@@ -91,8 +114,8 @@ class RBF:
                 # Compute RBF vector
                 Phi = self.rad_basis_mat(X_train[:,[i]])
                 # Train weights with Delta Rule method
-                error = f_train[:,[i]] - (Phi @ self.weight_vector)
-                delta_weights = self.lr*error*Phi.T
+                error = f_train[:,[i]].T - (Phi @ self.weight_vector)
+                delta_weights = self.lr*(Phi.T @ error)
                 self.weight_vector = self.weight_vector + delta_weights
             # Update training and test residual error
             res_error_epochs.append(residual_error(f_train,self.forward_pass(X_train).T))
@@ -103,7 +126,7 @@ class RBF:
 
 # HELPER FUNCTIONS
 def gaussian_tf (x,mu,sigma):
-    return np.exp((-(x-mu)**2)/(2*sigma**2))
+    return np.exp(-np.linalg.norm(x-mu)**2/(2*sigma**2))
 
 def sin(x,variance) : 
     return np.sin(2*x) + np.random.normal(0, variance)
@@ -134,7 +157,7 @@ def plot_series(rbfnet,X,series,series_pred,title) :
     ax.set_title(title)
     ax.plot(X,series,color=colors[0],label='True')
     ax.plot(X,series_pred,color=colors[1],label='Predicted')
-    ax.scatter(rbfnet.mus,np.zeros(np.shape(rbfnet.mus)[0]),s=rbfnet.sigmas*100,color='green',label='RBF nodes')
+    ax.scatter(rbfnet.mus,np.zeros(np.shape(rbfnet.mus)[0]),s=rbfnet.sigmas*100,color='green',marker='x',label='RBF nodes')
     ax.legend()
     ax.set_xlabel('x')
     ax.set_ylabel('f(x)')
@@ -149,6 +172,15 @@ def plot_error(errors,errors_test,title) :
     ax.legend()
     ax.set_xlabel('Epoch')
     ax.set_ylabel(title)
+    plt.show()
+
+def plot_input_space(rbfnet,X) :
+    fig, ax = plt.subplots()
+    ax.scatter(X[0,:],X[1,:], c=colors[0], label='Patterns')
+    ax.scatter(rbfnet.mus.T[0,:],rbfnet.mus.T[1,:], s=rbfnet.sigmas*100, c='green', marker='x', label='RBF nodes')
+    ax.grid(visible = True)
+    ax.legend()
+    ax.set_title('Input Space')
     plt.show()
 
 def residual_error(f,f_pred) :

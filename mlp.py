@@ -54,8 +54,8 @@ class NeuralNetwork:
     def forward_pass(self,X):
         # Vectorize activation function
         vfunc = np.vectorize(self.activation_fn)
-        # Compute RBF matrix
-        
+        # Initial results vector
+        prev_result = X
 
         # Iterate frontwards over layers
         for layer in range(self.n_layers):
@@ -162,29 +162,16 @@ class NeuralNetwork:
 
     def train(self,X,T,X_valid,T_valid,show=False,matrix=False):
         mses, mses_valid = [], []
-        errors, errors_valid = [], []
         for i in range(self.n_epochs) :
             # Perform weights update
             self.forward_pass(X)
             self.backward_pass(T)
             self.weights_update(X)
-
-            # Compute missclassification
-            if not matrix :
-                T_guessed,accuracy_pos, accuracy_neg, accuracy = self.classify(X,T,show)
-                T_guessed_valid,accuracy_pos_valid, accuracy_neg_valid, accuracy_valid = self.classify(X_valid,T_valid,show)
-            else :
-                T_guessed, accuracy = self.classify_matrix(X,T,show)
-                T_guessed_valid, accuracy_valid = self.classify_matrix(X_valid,T_valid,show)
-
-            errors.append(100-accuracy)
             mses.append(np.sum(np.square(self.forward_pass(X)-T))/np.shape(T))
-
-            errors_valid.append(100-accuracy_valid)
             O_valid = self.forward_pass(X_valid)
             mses_valid.append(np.sum(np.square(O_valid-T_valid))/np.shape(T_valid))
         
-        return errors, mses, errors_valid, mses_valid
+        return mses, mses_valid
 
     def validate(self,X,T,show=False) :
         mses = []
@@ -360,6 +347,3 @@ def subsample_function_data(X,T,f) :
     T_train = T[random_subs_indices]
     T_valid = T[[i for i in range(N) if i not in random_subs_indices]]
     return X_train, T_train, X_valid, T_valid
-
-
-
