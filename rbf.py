@@ -30,14 +30,14 @@ class RBF:
         self.n_layers = 2
         self.lr = lr
         self.n_epochs = n_epochs
-        self.weight_vector = np.zeros((self.arch[1], self.arch[2]))
+        self.W = np.zeros((self.arch[1], self.arch[2]))
         self.mus = np.zeros((self.arch[1],arch[0]))
         self.sigmas = np.ones((self.arch[1],1))
         self.rad_basis_fn = rad_basis_fn
 
     def initialize_weights(self) :
         # Initialize weights
-        self.weight_vector = np.random.normal(0, 1, size=(self.arch[1], self.arch[2]))
+        self.W = np.random.normal(0, 1, size=(self.arch[1], self.arch[2]))
 
     def initialize_rad_basis_fns(self,mus,sigmas) :
         # Initialize RBFs characteristics
@@ -89,7 +89,7 @@ class RBF:
         # Compute RBF matrix
         Phi = self.rad_basis_mat(X)
         # Compute output
-        f = Phi @ self.weight_vector
+        f = Phi @ self.W
         return f
     
     def least_squares(self,X,f) :
@@ -98,7 +98,7 @@ class RBF:
         # Train weights with LS method
         temp1 = np.linalg.inv(Phi.T @ Phi)
         temp2 = Phi.T @ f.T
-        self.weight_vector = temp1 @ temp2
+        self.W = temp1 @ temp2
 
     def delta_rule(self,X_train,f_train,X_test,f_test,n_epochs) :
         # Learning curves
@@ -114,9 +114,9 @@ class RBF:
                 # Compute RBF vector
                 Phi = self.rad_basis_mat(X_train[:,[i]])
                 # Train weights with Delta Rule method
-                error = f_train[:,[i]].T - (Phi @ self.weight_vector)
+                error = f_train[:,[i]].T - (Phi @ self.W)
                 delta_weights = self.lr*(Phi.T @ error)
-                self.weight_vector = self.weight_vector + delta_weights
+                self.W = self.W + delta_weights
             # Update training and test residual error
             res_error_epochs.append(residual_error(f_train,self.forward_pass(X_train).T))
             res_error_epochs_test.append(residual_error(f_test,self.forward_pass(X_test).T))
