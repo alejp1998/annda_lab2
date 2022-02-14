@@ -113,14 +113,35 @@ class SOM:
         
         
 # HELPER FUNCTIONS
-def plot_data(X,T) :
+def plot_cities(X,names) :
     fig, ax = plt.subplots()
-    ax.scatter(X[0,T>0],X[1,T>0], c=colors[0], label='Class B')
-    ax.scatter(X[0,T<0],X[1,T<0], c=colors[1], label='Class A')
+    ax.scatter(X[0,:],X[1,:], c=colors[0], label='KTH Buildings')
+    for i, name in enumerate(names):
+        ax.annotate(name, (X[0,i]+0.01, X[1,i]+0.01))
     ax.grid(visible = True)
     ax.legend()
-    ax.set_title('Patterns and Labels')
+    ax.set_title('Traveling KTH student')
     plt.show()
+
+def plot_cities_route(X,path,names) :
+    fig, ax = plt.subplots()
+    path = np.append(path,path[:,[0]],axis=1)
+    ax.scatter(X[0,:],X[1,:], c=colors[0], label='KTH Buildings')
+    ax.plot(path[0,:],path[1,:],c=colors[1],label='Student route')
+    for i, name in enumerate(names):
+        ax.annotate(name, (X[0,i]+0.01, X[1,i]+0.01))
+    ax.grid(visible = True)
+    ax.legend()
+    ax.set_title('Traveling KTH student')
+    plt.show()
+
+def calculate_perimeter(path) :
+    path = np.append(path,path[:,[0]],axis=1)
+    path_length = 0
+    for i in range(np.shape(path)[1]-1) :
+        path_length += np.sqrt((path[0,i]-path[0,i+1])**2 + (path[1,i]-path[1,i+1])**2)
+    return path_length
+
 
 
 
