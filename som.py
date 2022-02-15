@@ -39,7 +39,7 @@ class SOM:
         dists = np.linalg.norm(self.W-np.expand_dims(x,axis=1),axis=0)
         # Find winner node
         winner_index = np.argmin(dists)
-        winner_index_x = winner_index%np.shape(dists)[0]
+        winner_index_x = winner_index%np.shape(dists)[1]
         winner_index_y = int(winner_index/np.shape(dists)[1]) if np.shape(dists)[1] > 1 else 0
         return winner_index_x, winner_index_y
 
